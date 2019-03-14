@@ -1,8 +1,22 @@
-module control();
-	input key_pressed; // key_pressed means there is a input press from keyboard
-	input 
+module top_level(answer, key_pressed, clk, reset_n);
+	input [3:0] answer;
+	input key_pressed, clk, reset_n;
+	wire q_judge, q_life, enable_load, judge_signal, life_signal, q_reg, reset_life;
+	wire [3:0] cur_state;
+	control c0(key_pressed, q_judge, q_life, cur_state, enable_load, judge_signal, life_signal, clk, reset_n, reset_life);
+	judge j0(q_reg, Current_state, judge_signal, q_judge);
+	life_counter life0(reset_life, clk, life_signal, q_life);
+	answer_register an0 (answer, enable_load, key_pressed, reset_n, q_reg)
+
+
+endmodule 
+
+module control(key_pressed, q_judge, q_life, cur_state, enable_load, judge_signal, life_signal, clk, reset_n, reset_life);
+	input key_pressed, q_judge, q_life, clk, reset_n; // key_pressed means there is a input press from keyboard
 	reg [4:0] Current_state, Next_state;
-	reg time_wire_1, reset_timer, judge_signal, life_signal, q_life, q_judge;
+	reg time_wire_1, reset_timer, judge_signal, life_signal;
+	output reg q_life, q_judge, enable_load, reset_life;
+	output reg [2:0] cur_state;
 	localparam UP= 5'b00000, 
 				  UP_WAIT= 5'b00001,
 				  DOWN= 5'b00010,
@@ -29,6 +43,8 @@ module control();
 		judge_signal=0;
 		reset_timer=1'b1;
 		life_signal=0;
+		enable_load=0;
+		reset_life =1;
 		UP: begin 
 			
 			// key_pressed means there is a input press from keyboard
@@ -36,12 +52,13 @@ module control();
 			if(key_pressed && !time_wire_1)
 				begin 
 					Next_state<=UP_WAIT;
+					enable_load = 1; // can load answer now
+					judge_signal =1;
+					cur_state <= 3'b000;
 				end
 			else if(key_pressed && time_wire_1)
 				begin
 					Next_state<=TIME_OUT;
-					//TODO: register input, enable high register(enable, input_value, q)
-					judge_signal =1;
 				end
 			else
 				begin
@@ -65,6 +82,7 @@ module control();
 			if (time_wire_1)
 				begin 
 					// TODO: Next_state = random()
+					enable_load = 1; // can load answer now
 				end
 			else 
 				begin
@@ -100,6 +118,7 @@ module control();
 			if (time_wire_1)
 				begin
 					Next_state <= // random instructions
+					enable_load = 1; // can load answer now
 				end
 			else 
 				begin
@@ -108,7 +127,7 @@ module control();
 			end
 		
 		REALLY_DEAD: begin
-		
+			reset_life = 0;
 		end
 		
 		TIME_OUT: begin
@@ -128,25 +147,68 @@ module control();
 			
 	endcase
 	end
-	timer_3s timer1(reset_timer, clk, time_wire_1);
-	// TODO register(enable,clk,q_reg,clear)
-	judge(q_reg, Current_state, judge_signal, q_judge);
-	life_counter life(reset_life, clk, life_signal, q_life);
-
+	timer_3s timer1(reset_timer, clk, time_wire_1);	
 
 endmodule
+
+
+module answer_register(answer, enable_load, key_pressed, reset_n, q);
+	input [3:0] answer;
+	input enable_load, key_pressed;
+	output reg [3:0]q;
+	always @(posedge clk)
+		begin
+			if (!reset_n)
+				q <= 4'h0000;
+			else if (key_pressed && enable_load)
+				q <= answer;
+				
+		end
+
+endmodule 
+
+
+
 
 // cur_input read from resgister (q), cur_state: current state, signal: do judge or not; q is correct or not
 module judge(cur_input, cur_state,signal, q);
-	// TODO, answer(cur_state, answer)
-	// TODO, compare (answer, cur_input)-> q, q is high when same answer
+	output reg q;
+	input [3:0]cur_input; // input in hex
+	input [2:0]cur_state;
+	localparam UP= 3'b000, 
+				  DOWN= 3'b001,
+				  LEFT= 3'b010,
+				  RIGHT= 3'b011,
+				  VOWAL= 3'b100,
+				  DIGIT= 3'b101;
+	
+	always @(*)
+	begin
+		if (signal)
+			begin
+			case(cur_state)
+				UP : begin
+					q <= (cur_input == 4'hE072);
+						end
+				DOWN : begin
+					q <= (cur_input == 4'hE075);
+						end
+				RIGHT : begin
+					q <= (cur_input == 4'hE06B);
+						end
+				LEFT : begin
+					q <= (cur_input == 4'hE074);
+						end
+				VOWEL : begin
+					q <= (cur_input == );  // TODO, when decide input
+						end
+				DIGIT : begin
+					q <= (cur_input == );  // TODO, when decide input
+						end
+			end
+	end
 endmodule
 
-module answer(cur_state, answer); // make is a hardcoding mux/ store unit
-// TODO, case(cur_state) -> answer
-
-
-endmodule 
 
 module life_counter(reset_n, clk, signal, q);
 	always @(posedge clk)
