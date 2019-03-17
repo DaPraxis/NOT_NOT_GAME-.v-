@@ -176,22 +176,25 @@ endmodule // module
 module instruction_shift(
 	input change_instruction, 
 	input clk,
+	input rst_n,
 	output reg [2:0] instruction);
 	wire [3:0]random;
-	random r1 (clk, 1, random);
-	always @(*) begin : proc_
-		if (random < 4'd3)
-			instruction = 3'b000; // UP
-		else if (random < 4'd6)
-			instruction = 3'b001; // DOWN
-		else if (random < 4'd9)
-			instruction = 3'b010; // LEFT
-		else if (random < 4'd11)
-			instruction = 3'b011; // RIGHT
-		else if (random < 4'd13)
-			instruction = 3'b100; // VOWEL
+	reg [3:0]ran;
+	random r1 (clk, rst_n, random);
+	always @(posedge change_instruction) begin : proc_
+		ran <= random;
+		if (ran < 4'b0011)
+			instruction <= 3'b000; // UP
+		else if (ran < 4'b0110)
+			instruction <= 3'b001; // DOWN
+		else if (ran < 4'b1001)
+			instruction <= 3'b010; // LEFT
+		else if (ran < 4'b1011)
+			instruction <= 3'b011; // RIGHT
+		else if (ran < 4'b1101)
+			instruction <= 3'b100; // VOWEL
 		else 
-			instruction = 3'b101; // DIGIT
+			instruction <= 3'b101; // DIGIT
 	end
 	
 
@@ -246,7 +249,7 @@ module test_control(
 	counter c1 (enable_counter,clk, count_q);
 	control1 c0 (clk,reset_control1,key_pressed, answer, count_q,prepare_judge,enable_counter, change_instruction,decrese_life);
 	judge j0 (clk, prepare_judge, key_pressed, user_input, answer);
-	instruction_shift i0(change_instruction, clk, instruction);
+	instruction_shift i0(change_instruction, clk, reset_control1, instruction);
 
 
 
