@@ -1,16 +1,14 @@
-module control1 (
-	input clk,    // Clock
-	input rst_n,  // Asynchronous reset active low
-	input key_pressed, //User input new answer, 1 when key is pressed
-	input answer, // Returned from judge, 1 when answer matchs the key
-	input wait_counter, // Returned from counter, 1 if more than that counting time
-	output reg prepare_judge, // Start to prepare judge unit, from Nothing to Judge
-	output reg enable_counter, // Start to run transition counter
-	output reg change_instruction,
-	output reg decrese_life
+module control1 (clk, rst_n, key_pressed, answer, wait_counter, prepare_judge, enable_counter, change_instruction, decrease_life);
 
-	
-);
+	input clk;    // Clock
+	input rst_n;  // Asynchronous reset active low
+	input key_pressed; //User input new answer, 1 when key is pressed
+	input answer; // Returned from judge, 1 when answer matchs the key
+	input wait_counter; // Returned from counter, 1 if more than that counting time
+	output reg prepare_judge; // Start to prepare judge unit, from Nothing to Judge
+	output reg enable_counter; // Start to run transition counter
+	output reg change_instruction;
+	output reg decrease_life;
 	reg [4:0] CURRENT_STATE, NEXT_STATE;
 
 
@@ -43,7 +41,7 @@ module control1 (
 		prepare_judge = 1'b0;
 		enable_counter = 1'b0;
 		change_instruction = 1'b0;
-		decrese_life = 1'b1;
+		decrease_life = 1'b0;
 		case(CURRENT_STATE)
 			INSTRUCTION_STATE: 
 				begin
@@ -59,7 +57,7 @@ module control1 (
 				begin
 					enable_counter = 1'b1;
 					change_instruction = 1'b1;
-					decrese_life = 1'b1;
+					decrease_life = 1'b1;
 				end
 			START_STATE:
 				begin
@@ -69,11 +67,10 @@ module control1 (
 	end
 
 	always @(posedge clk) begin : FF_FSM
-		if(~rst_n) begin
+		if(~rst_n) 
 			 CURRENT_STATE<= START_STATE;
-		end else begin
+		 else 
 			 CURRENT_STATE<= NEXT_STATE;
-		end
 	end
 
 
