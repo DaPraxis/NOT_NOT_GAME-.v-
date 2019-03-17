@@ -43,7 +43,7 @@ module control1 (
 		prepare_judge = 1'b0;
 		enable_counter = 1'b0;
 		change_instruction = 1'b0;
-		decrese_life = 1'b1;
+		decrese_life = 1'b0;
 		case(CURRENT_STATE)
 			INSTRUCTION_STATE: 
 				begin
@@ -100,13 +100,13 @@ module judge (
 		case(CURRENT_STATE)
 			JUDGE_STATE: NEXT_STATE = key_pressed ? JUDGE_WAIT : JUDGE_STATE;
 			JUDGE_WAIT: NEXT_STATE = key_pressed ? JUDGE_WAIT : NOTHING;
-			NOTHING: NEXT_STATE = prepare_judge ? JUDGE_STATE : JUDGE_WAIT;
+			NOTHING: NEXT_STATE = prepare_judge ? JUDGE_STATE : NOTHING;
 			default: NEXT_STATE = NOTHING;
 		endcase
 	
 	end
 
-	always @(*) begin : FSM_ASSIGNMENTS
+	always @(posedge clk) begin : FSM_ASSIGNMENTS
 		case(CURRENT_STATE) // load IN JUDGE_WAIT and compare
 			JUDGE_WAIT:  
 			begin
@@ -114,7 +114,10 @@ module judge (
 				answer <= q;
 			end
 		endcase
+	end
 	
+	always @(posedge clk) begin: FF_FSM
+		CURRENT_STATE<= NEXT_STATE;
 	end
 
 	mux_compare m1(cur_input, q);
