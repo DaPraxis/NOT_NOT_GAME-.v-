@@ -11,7 +11,7 @@ module control1 (
 
 	
 );
-	reg [1:0] CURRENT_STATE, NEXT_STATE;
+	reg [4:0] CURRENT_STATE, NEXT_STATE;
 
 
 	localparam INSTRUCTION_STATE = 5'b00000,
@@ -21,7 +21,7 @@ module control1 (
 			   CORRECT_STATE = 5'b00100,
 			   CORRECT_WAIT = 5'b00101,
 			   WRONG_WAIT = 5'b00110,
-			   START_STATE = 5'b00111
+			   START_STATE = 5'b00111,
 			   START_WAIT = 5'b01000;
 
 	always @(*) begin : FSM_TABLE
@@ -83,7 +83,6 @@ endmodule
 module judge (
 	input clk,    // Clock
 	input prepare_judge, // Clock Enable
-	input rst_n,  // Asynchronous reset active low
 	input key_pressed,
 	input [15:0] user_input,
 	output reg answer
@@ -110,19 +109,21 @@ module judge (
 	always @(*) begin : FSM_ASSIGNMENTS
 		case(CURRENT_STATE) // load IN JUDGE_WAIT and compare
 			JUDGE_WAIT:  
+			begin
 				cur_input <= user_input;
 				answer <= q;
+			end
 		endcase
 	
 	end
 
-	mux_compare(cur_input, q)
+	mux_compare m1(cur_input, q);
 
 endmodule
 
 module mux_compare(
 	input [15:0] user_input,
-	output q);
+	output reg q);
 	
 	always @(*) begin : compare
 		case(user_input)
@@ -238,10 +239,10 @@ module test_control(
 	output decrese_life,
 	output [2:0]instruction
 	);
-	wire enable_counter, count_q, answer, prepare_judge, decrese_life, change_instruction;
+	wire enable_counter, count_q, answer, prepare_judge, change_instruction;
 	counter c1 (enable_counter,clk, count_q);
 	control1 c0 (clk,reset_control1,key_pressed, answer, count_q,prepare_judge,enable_counter, change_instruction,decrese_life);
-	judge j0 (clk, prepare_judge, rst_n, key_pressed, user_input, answer);
+	judge j0 (clk, prepare_judge, key_pressed, user_input, answer);
 	instruction_shift i0(change_instruction, clk, instruction);
 
 
