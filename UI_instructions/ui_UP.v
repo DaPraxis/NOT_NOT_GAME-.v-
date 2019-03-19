@@ -1,7 +1,7 @@
 module ui_UP(
 	input [3:0]KEY,
 	input CLOCK_50,
-	input [9:0]SW
+	input [9:0]SW,
 	output VGA_CLK,   						//	VGA Clock
 	output VGA_HS,							//	VGA H_SYNC
 	output VGA_VS,							//	VGA V_SYNC
