@@ -1,6 +1,7 @@
 module ui_UP(
 	input [3:0]KEY,
 	input CLOCK_50,
+	input [9:0]SW
 	output VGA_CLK,   						//	VGA Clock
 	output VGA_HS,							//	VGA H_SYNC
 	output VGA_VS,							//	VGA V_SYNC
@@ -8,9 +9,10 @@ module ui_UP(
 	output VGA_SYNC_N,						//	VGA SYNC
 	output [9:0] VGA_R,   						//	VGA Red[9:0]
 	output [9:0] VGA_G,	 						//	VGA Green[9:0]
-	output [9:0] VGA_B);   						//	VGA Blue[9:0]);
-	ui_up(CLOCK_50,KEY[0],~KEY[1],    
-		  VGA_CLK, VGA_VS, VGA_BLANK_N,	VGA_SYNC_N,	VGA_R [9:0], VGA_G [9:0], VGA_B [9:0]);
+	output [9:0] VGA_B, 						//	VGA Blue[9:0]);
+	output [7:0]LEDR);   						
+	ui_up(CLOCK_50,KEY[0],~KEY[1],SW[2:0],   
+		  VGA_CLK, VGA_VS, VGA_BLANK_N,	VGA_SYNC_N,	VGA_R, VGA_G, VGA_B, LEDR[0]);
 
 endmodule
 
@@ -19,6 +21,7 @@ module ui_up
 		input clk,						
         input reset_vga, // reset controller
         input enable_control, // enable the control
+        input [2:0] color,
 		// The ports below are for the VGA output.  Do not change.
 		output VGA_CLK,   						//	VGA Clock
 		output VGA_HS,							//	VGA H_SYNC
@@ -27,13 +30,14 @@ module ui_up
 		output VGA_SYNC_N,						//	VGA SYNC
 		output [9:0] VGA_R,   						//	VGA Red[9:0]
 		output [9:0] VGA_G,	 						//	VGA Green[9:0]
-		output [9:0] VGA_B   						//	VGA Blue[9:0]
+		output [9:0] VGA_B,   						//	VGA Blue[9:0]
+		output done
 	);
 
 	vga_adapter VGA(
 			.resetn(reset_vga),
 			.clock(CLOCK_50),
-			.colour(3'b111), // ui default color
+			.colour(color [2:0]), 
 			.x(x),
 			.y(y),
 			.plot(writeEn),
@@ -52,7 +56,7 @@ module ui_up
 	wire [7:0] x;
 	wire [6:0] y;
 	control c0(clk, reset_vga, enable_control, enable, writeEn);
-	datapath d0(clk, reset_vga, enable, x, y);
+	datapath d0(clk, reset_vga, enable, x, y, done);
 
 endmodule
 
@@ -106,6 +110,7 @@ module datapath(input clk,
 				input enable, 
 				output [7:0] x_out,
 				output [6:0] y_out,
+				output done // signal for all ui drawing is done
 				);
 
 	// could vary according to shape
@@ -117,7 +122,7 @@ module datapath(input clk,
 	wire frame_enable;
 	// when frame division done, x enabled 
 	wire [3:0] frame_out;
-	wire enable1, enable2, enable3, enable4;
+	wire enable1, enable2, enable3;
 	reg [7:0] x;
 	reg [6:0] y;
 
@@ -128,7 +133,7 @@ module datapath(input clk,
 			x <= 8'd79;  // from middle
 			y <= 7'd63;  // from top
 		end
-		else if (enable4)
+		else if (done)
 		begin
 			x <= 8'd79;  // from middle
 			y <= 7'd63;  // from top
@@ -173,7 +178,7 @@ module datapath(input clk,
 
 	counter_4 c3(clk, enable3, reset_n, increment3);
 
-	assign enable4 = (increment3 == 2'b11) ? 1 : 0; // stop the curser
+	assign done = (increment3 == 2'b11) ? 1 : 0; // stop the curser
 	
 endmodule
 
