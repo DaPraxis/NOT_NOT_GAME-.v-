@@ -1,61 +1,12 @@
-// this version only used for detect and debug
-module ui_UP(
-	input [3:0]KEY,
-	input CLOCK_50,
-	input [9:0]SW,
-	output VGA_CLK,   						//	VGA Clock
-	output VGA_HS,							//	VGA H_SYNC
-	output VGA_VS,							//	VGA V_SYNC
-	output VGA_BLANK_N,						//	VGA BLANK
-	output VGA_SYNC_N,						//	VGA SYNC
-	output [9:0] VGA_R,   						//	VGA Red[9:0]
-	output [9:0] VGA_G,	 						//	VGA Green[9:0]
-	output [9:0] VGA_B, 						//	VGA Blue[9:0]);
-	output [7:0]LEDR);   						
-	ui_up(CLOCK_50,KEY[0],~KEY[1],SW[2:0],   
-		  VGA_CLK, VGA_VS, VGA_BLANK_N,	VGA_SYNC_N,	VGA_R, VGA_G, VGA_B, LEDR[0]);
-
-endmodule
-
+// this is the ui component we use to connect with mux_ui
 module ui_up
 	(
 		input clk,						
         input reset_vga, // reset controller
         input enable_control, // enable the control
-        input [2:0] color,
-		// The ports below are for the VGA output.  Do not change.
-		output VGA_CLK,   						//	VGA Clock
-		output VGA_HS,							//	VGA H_SYNC
-		output VGA_VS,							//	VGA V_SYNC
-		output VGA_BLANK_N,						//	VGA BLANK
-		output VGA_SYNC_N,						//	VGA SYNC
-		output [9:0] VGA_R,   						//	VGA Red[9:0]
-		output [9:0] VGA_G,	 						//	VGA Green[9:0]
-		output [9:0] VGA_B,   						//	VGA Blue[9:0]
-		output done
-	);
-
-	vga_adapter VGA(
-			.resetn(reset_vga),
-			.clock(CLOCK_50),
-			.colour(color [2:0]), 
-			.x(x),
-			.y(y),
-			.plot(writeEn),
-			.VGA_R(VGA_R),
-			.VGA_G(VGA_G),
-			.VGA_B(VGA_B),
-			.VGA_HS(VGA_HS),
-			.VGA_VS(VGA_VS),
-			.VGA_BLANK(VGA_BLANK_N),
-			.VGA_SYNC(VGA_SYNC_N),
-			.VGA_CLK(VGA_CLK));
-		defparam VGA.RESOLUTION = "160x120";
-		defparam VGA.MONOCHROME = "FALSE";
-		defparam VGA.BITS_PER_COLOUR_CHANNEL = 1;
-		defparam VGA.BACKGROUND_IMAGE = "black.mif";
-	wire [7:0] x;
-	wire [6:0] y;
+		output [7:0] x,
+		output [6:0] y, 
+		output writeEn);
 	wire enable;
 	control c0(clk, reset_vga, enable_control, enable, writeEn);
 	datapath d0(clk, reset_vga, enable, x, y, done);
