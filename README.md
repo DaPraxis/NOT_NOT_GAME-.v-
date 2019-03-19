@@ -2,4 +2,4 @@
 CSC258 verilog project
 
 Catelog:
-### not_not.v, ui_UP.V  -- Mar 18th 2019
+### control1.v, ui_UP.V  -- Mar 18th 2019
