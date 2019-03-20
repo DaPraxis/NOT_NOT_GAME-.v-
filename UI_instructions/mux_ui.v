@@ -2,7 +2,7 @@ module mux_ui (
 	input change_instruction, 
 	input reset_n,
 	input clk,
-	input clear_instruction
+	input clear_instruction,
 	output VGA_CLK,   						//	VGA Clock
 		output VGA_HS,							//	VGA H_SYNC
 		output VGA_VS,							//	VGA V_SYNC
@@ -15,9 +15,9 @@ module mux_ui (
 	);
 
 	vga_adapter VGA(
-			.resetn(reset_vga),
+			.resetn(reset_instructions),
 			.clock(clk),
-			.colour(color [2:0]), 
+			.colour(color), 
 			.x(x),
 			.y(y),
 			.plot(writeEn),
@@ -34,14 +34,17 @@ module mux_ui (
 		defparam VGA.BITS_PER_COLOUR_CHANNEL = 1;
 		defparam VGA.BACKGROUND_IMAGE = "black.mif";
 	wire [2:0] color; 
+	wire [7:0] x;
+	wire [6:0] y;
 	wire [2:0] current_instruction; 
 	wire [3:0] control_instructions;
-	wire reset_instructions, done;
-	instruction_shift (change_instruction, reset_n, clk, change_instruction);
-	mux_instructions(control_instructions, clk, reset_instructions, done);
+	wire reset_instructions, done, writeEn;
+	instruction_shift (change_instruction, reset_n, clk, current_instruction);
+	mux_instructions(control_instructions, clk, reset_instructions, done, writeEn, x, y);
 	mux_control(change_instruction, current_instruction, reset_n, done, clear_instruction,
-		clk, reset_instructions, control_instructions);
-
+		clk, reset_instructions, control_instructions, color);
+	// clear_instruction paint the instruction back to black;
+	// reset_instructions reset the instructions so that can be drawn
 
 	// with a VGA adaptor
 
@@ -56,12 +59,18 @@ module mux_instructions(
 	// [2:0] instruction 
 	input clk, 
 	input reset_n, 
-	output done);
+	output done, 
+	output reg writeEn, 
+	output reg [2:0] color,
+	output reg [7:0] x,
+	output reg [6:0] y);
 	reg en_u1, en_u1c, en_u2, en_u2c, en_u3, en_u3c, en_u4, en_u4c, en_u5, en_u5c, 
 	en_u6, en_u6c;
-	reg [2:0] color;
-	reg [7:0] x;
-	reg [6:0] y;
+	wire done1, done1c, done2, done2c, done3, done3c, done4, done4c, done5,
+	done5c, done6, done6c;
+	wire writeEn1, writeEn1c, writeEn2, writeEn2c, writeEn3, writeEn3c, writeEn4, 
+	writeEn4c, writeEn5, writeEn5c, writeEn6, writeEn6c;
+	
 
 	localparam UP = 3'b000,
 			   DOWN = 3'b001,
@@ -69,6 +78,9 @@ module mux_instructions(
 			   LEFT = 3'b011, 
 			   R = 3'b100, 
 			   L = 3'b101;
+
+	wire [7:0] x1, x1c, x2, x2c, x3, x3c, x4, x4c, x5, x5c, x6, x6c;
+	wire [6:0] y1, y1c, y2, y2c, y3, y3c, y4, y4c, y5, y5c, y6, y6c;
 
 	always @(*) begin : proc_
 		en_u1 = 0;
@@ -83,47 +95,119 @@ module mux_instructions(
 		en_u5c = 0;
 		en_u6 = 0;
 		en_u6c = 0;
+
 		case (instruction[2:0])
-			UP : (instruction [3])? en_u1c =1, x <= x1c, y <= y1c : en_u1 = 1, x <= x1c, y <= y1c;
-			DOWN : (instruction [3])? en_u2c =1, x <= x2c, y <= y2c : en_u2 = 1, x <= x2c, y <= y2c;
-			RIGHT : (instruction [3])?en_u3c =1, x <= x3c, y <= y3c : en_u3 = 1, x <= x3c, y <= y3c;
-			LEFT : (instruction [3])? en_u4c =1, x <= x4c, y <= y4c : en_u4 = 1, x <= x4c, y <= y4c;
-			R : (instruction [3])? en_u5c =1, x <= x5c, y <= y5c : en_u5 = 1, x <= x5c, y <= y5c;
-			L : (instruction [3])? en_u6c =1, x <= x6c, y <= y6c : en_u6 = 1, x <= x6c, y <= y6c;
+			UP : if (instruction [3])
+					en_u1c =1;
+					x <= x1c;
+					y <= y1c;
+					done <= done1c;
+					writeEn <= writeEn1c;
+					color <= 3'b000;
+				else 
+					en_u1 = 1;
+					x <= x1;
+					y <= y1;
+					done <= done1;
+					writeEn <= writeEn1;
+					color <= 3'b111;
+			DOWN :  if (instruction [3])
+						en_u2c =1;
+						x <= x2c;
+						y <= y2c;
+						done <= done2c;
+						writeEn <= writeEn2c;
+						color <= 3'b000;
+					else 
+						en_u2 = 1;
+						x <= x2;
+						y <= y2;
+						done <= done2;
+						writeEn <= writeEn2;
+						color <= 3'b001;
+			RIGHT : if (instruction [3])
+						en_u3c =1;
+						x <= x3c;
+						y <= y3c;
+						done <= done3c;
+						writeEn <= writeEn3c;
+						color <= 3'b000;
+					else 
+						en_u3 = 1;
+						x <= x3;
+						y <= y3;
+						done <= done3;
+						writeEn <= writeEn3;
+						color <= 3'b011;
+			LEFT :  if (instruction [3])
+						en_u4c =1;
+						x <= x4c;
+						y <= y4c;
+						done <= done4c;
+						writeEn <= writeEn4c;
+						color <= 3'b000;
+					else 
+						en_u4 = 1;
+						x <= x4;
+						y <= y4;
+						done <= done4;
+						writeEn <= writeEn4;
+						color <= 3'b010;
+			R : if (instruction [3])
+					en_u5c =1;
+					x <= x5c;
+					y <= y5c;
+					done <= done5c;
+					writeEn <= writeEn5c;
+					color <= 3'b000;
+				else 
+					en_u5 = 1;
+					x <= x5;
+					y <= y5;
+					done <= done5;
+					writeEn <= writeEn5;
+					color <= 3'b100;
+			L : if (instruction [3])
+					en_u6c =1;
+					x <= x6c;
+					y <= y6c;
+					done <= done6c;
+					writeEn <= writeEn6c;
+					color <= 3'b000;
+				else 
+					en_u6 = 1;
+					x <= x6;
+					y <= y6;
+					done <= done6;
+					writeEn <= writeEn6;
+					color <= 3'b101;
 			
 		endcase
 	end
-	wire done1, done1c, done2, done2c, done3, done3c, done4, done4c, done5,
-	done5c, done6, done6c;
-	wire [7:0] x1, x1c, x2, x2c, x3, x3c, x4, x4c, x5, x5c, x6, x6c;
-	wire [6:0] y1, y1c, y2, y2c, y3, y3c, y4, y4c, y5, y5c, y6, y6c;
-	ui_UP u1 (clk, reset_n, en_u1, x1, y1);  
+	
+	ui_UP u1 (clk, reset_n, en_u1, x1, y1, done1, writeEn1);  
 	// hard coding color for instructions and clear
-	ui_UP u1c (clk, reset_n, en_u1c, x1c, y1c);
-	ui_DOWN u2 (clk, reset_n, en_u2, x2, y2);
-	ui_DOWN u2c (clk, reset_n, en_u2c, x2c, y2c);
-	ui_RIGHT u3 (clk, reset_n, en_u3, x3, y3);
-	ui_RIGHT u3c (clk, reset_n, en_u3c, x3c, y3c);
-	ui_LEFT u4 (clk, reset_n, en_u4, x4, y4);
-	ui_LEFT u4c (clk, reset_n, en_u4c, x4c, y4c);
-	ui_R u5 (clk, reset_n, en_u5, x5, y5);
-	ui_R u5c (clk, reset_n, en_u5c, x5c, y5c);
-	ui_L u6 (clk, reset_n, en_u6, x6, y6);
-	ui_L u6c (clk, reset_n, en_u6c, x6c, y6c);
-
-
-
-
+	ui_UP u1c (clk, reset_n, en_u1c, x1c, y1c, done1c, writeEn1c);
+	ui_DOWN u2 (clk, reset_n, en_u2, x2, y2, done2, writeEn2);
+	ui_DOWN u2c (clk, reset_n, en_u2c, x2c, y2c, done2c, writeEn2c);
+	ui_RIGHT u3 (clk, reset_n, en_u3, x3, y3, done3, writeEn3);
+	ui_RIGHT u3c (clk, reset_n, en_u3c, x3c, y3c, done3c, writeEn3c);
+	ui_LEFT u4 (clk, reset_n, en_u4, x4, y4, done4, writeEn4);
+	ui_LEFT u4c (clk, reset_n, en_u4c, x4c, y4c, done4c, writeEn4c);
+	ui_R u5 (clk, reset_n, en_u5, x5, y5, done5, writeEn5);
+	ui_R u5c (clk, reset_n, en_u5c, x5c, y5c, done5c, writeEn5c);
+	ui_L u6 (clk, reset_n, en_u6, x6, y6, done6, writeEn6);
+	ui_L u6c (clk, reset_n, en_u6c, x6c, y6c, done6c, writeEn6c);
 	
 
 endmodule 
 
 module mux_control(
-		input enable,
+		input enable,  // corresponding to change_instruction flag, flip
 		input [2:0]instruction,
 		input reset_n,
 		input done, 
-		input clear,
+		input clear, // Clear the instruction, paint to black
 		input clk,
 		output reg reset_instructions, 
 		output reg [3:0] control_instructions
@@ -181,7 +265,7 @@ module mux_control(
 						3'b001:  NEXT_STATE = DOWN_CLEAR;  // DOWN
 					 	3'b010:  NEXT_STATE = LEFT_CLEAR;  // LEFT
 						3'b011:  NEXT_STATE = RIGHT_CLEAR; // RIGHT
-						3'b100:  NEXT_STATE = L_CLEAR;   	 // L
+						3'b100:  NEXT_STATE = L_CLEAR;     // L
 						3'b101:  NEXT_STATE = R_CLEAR;     // R
 					endcase
 				end
@@ -214,6 +298,7 @@ module mux_control(
 			L_CLEAR_WAIT: NEXT_STATE = done ? L_CLEAR_WAIT : ON_HOLD;
 			R_CLEAR: NEXT_STATE = done ? R_CLEAR_WAIT : R;
 			R_CLEAR_WAIT: NEXT_STATE = done ? R_CLEAR_WAIT : ON_HOLD;
+
 			
 			default : /* default */;
 		endcase
@@ -227,18 +312,18 @@ module mux_control(
 			ON_HOLD:
 				clear_ui <= 0;
 				reset_instructions = 0;
-			UP: control_instructions = 4'b0000;
-			DOWN: control_instructions = 4'b0001;
-			RIGHT: control_instructions = 4'b0010;
-			LEFT: control_instructions = 4'b0011;
-			R: control_instructions = 4'b0100;
-			L: control_instructions = 4'b0101;
-			UP_CLEAR: control_instructions = 4'b1000;
-			DOWN_CLEAR: control_instructions = 4'b1001;
-			RIGHT_CLEAR: control_instructions = 4'b1010;
-			LEFT_CLEAR: control_instructions = 4'b1011;
-			R_CLEAR: control_instructions = 4'b1100;
-			L_CLEAR: control_instructions = 4'b1101;
+			UP: control_instructions <= 4'b0000;
+			DOWN: control_instructions <= 4'b0001;
+			RIGHT: control_instructions <= 4'b0010;
+			LEFT: control_instructions <= 4'b0011;
+			R: control_instructions <= 4'b0100;
+			L: control_instructions <= 4'b0101;
+			UP_CLEAR: control_instructions <= 4'b1000;
+			DOWN_CLEAR: control_instructions <= 4'b1001;
+			RIGHT_CLEAR: control_instructions <= 4'b1010;
+			LEFT_CLEAR: control_instructions <= 4'b1011;
+			R_CLEAR: control_instructions <= 4'b1100;
+			L_CLEAR: control_instructions <= 4'b1101;
 
 
 		endcase
