@@ -15,6 +15,7 @@ endmodule
 
 
 // enable unit set start the unit, change with a palse of 1 : 0000100000
+// enable unit set start the unit, change with a palse of 1 : 0000100000
 module control(input clk, 
 			   input reset_n,
 			   input enable_unit,
@@ -61,8 +62,8 @@ endmodule
 module datapath(input clk, 
 				input reset_n, 
 				input enable, 
-				output [7:0] x_out,
-				output [6:0] y_out,
+				output reg [7:0] x,
+				output reg [6:0] y,
 				output done // signal for all ui drawing is done
 				);
 
@@ -76,12 +77,10 @@ module datapath(input clk,
 	// when frame division done, x enabled 
 	wire [3:0] frame_out;
 	wire enable1, enable2, enable3;
-	reg [7:0] x;
-	reg [6:0] y;
 
 	
 	always @(posedge clk) begin : proc_
-		if (reset_n)
+		if (!reset_n)
 		begin
 			x <= 8'd79;  // from middle
 			y <= 7'd63;  // from top
@@ -94,28 +93,28 @@ module datapath(input clk,
 		else if (enable3)
 		begin
 			x <= 8'd79 - increment3;
-			y <= 7'd63 - increment3;
+			y <= 7'd63 + increment3;
 
 		end
 		else if (enable2)
 		begin
 			x <= 8'd79 + increment2;
-			y <= 7'd63 - increment2;
+			y <= 7'd63 + increment2;
 		end
 		else if (enable1)
 		begin
 			x <= 8'd79;
-			y <= 7'd63 - increment1;
+			y <= 7'd63 + increment1;
 		end
 	
 	end
 	// rate divider
 	rate_divider rate(clk, reset_n, enable, rate_out); 
-	assign frame_enable = (rate_out == 20'd0) 1 : 0;
+	assign frame_enable = (rate_out == 20'd0) ? 1 : 0;
 	
 	// frame counter
 	frame_counter frame(clk, frame_enable, reset_n, frame_out);
-	assign enable1 = (frame_out == 4'd10) 1 : 0;
+	assign enable1 = (frame_out == 4'd10) ? 1 : 0;
 	
 	// x counter for square 4 * 4 plane
 	// threshold = 2'b11
@@ -127,11 +126,13 @@ module datapath(input clk,
 	
 	counter_4 c2(clk, enable2, reset_n, increment2);
 
-	assign enable3 = (increment2 == 2'b11) ? 1 : 0;
+	assign enable3 = (increment2 == 3'b011) ? 1 : 0;
 
 	counter_4 c3(clk, enable3, reset_n, increment3);
-
-	assign done = (increment3 == 2'b11) ? 1 : 0; // stop the curser
+	
+	assign done = (increment3 == 3'b011) ? 1 : 0;
+	
+	
 	
 endmodule
 
@@ -142,12 +143,12 @@ module counter_4 (clk, enable, reset_n, increment);
 	
 	always @(posedge clk) begin
 		if (!reset_n)
-			out <= 3'b0;
+			increment <= 3'b0;
 		else if (enable) begin
-			if (out == 3'b011)
-				out <= 3'b0;
-			else
-				out <= out + 1'b1;
+			if (increment == 3'b011)
+				increment <= 3'b0;
+			else 
+				increment <= increment + 1'b1;
 		end
 	end
 endmodule 
@@ -159,12 +160,12 @@ module counter_8 (clk, enable, reset_n, increment);
 	
 	always @(posedge clk) begin
 		if (!reset_n)
-			out <= 3'b0;
+			increment <= 3'b0;
 		else if (enable) begin
-			if (out == 3'b111)
-				out <= 3'b0;
+			if (increment == 3'b111)
+				increment <= 3'b0;
 			else
-				out <= out + 1'b1;
+				increment <= increment + 1'b1;
 		end
 	end
 endmodule
