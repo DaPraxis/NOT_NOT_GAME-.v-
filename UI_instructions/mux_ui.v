@@ -1,65 +1,86 @@
-module mux_ui (
+module mux_ui ( // testing
 	input change_instruction, 
 	input reset_n,
 	input clk,
 	input clear_instruction,
-	output VGA_CLK,   						//	VGA Clock
-		output VGA_HS,							//	VGA H_SYNC
-		output VGA_VS,							//	VGA V_SYNC
-		output VGA_BLANK_N,						//	VGA BLANK
-		output VGA_SYNC_N,						//	VGA SYNC
-		output [9:0] VGA_R,   						//	VGA Red[9:0]
-		output [9:0] VGA_G,	 						//	VGA Green[9:0]
-		output [9:0] VGA_B,   						//	VGA Blue[9:0]
-		output done
+	output [7:0] x,
+	output [6:0] y,
+	output [2:0] color,
+	output writeEn
 	);
 
-	vga_adapter VGA(
-			.resetn(reset_instructions),
-			.clock(clk),
-			.colour(color), 
-			.x(x),
-			.y(y),
-			.plot(writeEn),
-			.VGA_R(VGA_R),
-			.VGA_G(VGA_G),
-			.VGA_B(VGA_B),
-			.VGA_HS(VGA_HS),
-			.VGA_VS(VGA_VS),
-			.VGA_BLANK(VGA_BLANK_N),
-			.VGA_SYNC(VGA_SYNC_N),
-			.VGA_CLK(VGA_CLK));
-		defparam VGA.RESOLUTION = "160x120";
-		defparam VGA.MONOCHROME = "FALSE";
-		defparam VGA.BITS_PER_COLOUR_CHANNEL = 1;
-		defparam VGA.BACKGROUND_IMAGE = "black.mif";
-	wire [2:0] color; 
-	wire [7:0] x;
-	wire [6:0] y;
-	wire [2:0] current_instruction; 
 	wire [3:0] control_instructions;
-	wire reset_instructions, done, writeEn;
-	instruction_shift (change_instruction, reset_n, clk, current_instruction);
-	mux_instructions(control_instructions, clk, reset_instructions, done, writeEn, x, y);
-	mux_control(change_instruction, current_instruction, reset_n, done, clear_instruction,
-		clk, reset_instructions, control_instructions, color);
-	// clear_instruction paint the instruction back to black;
-	// reset_instructions reset the instructions so that can be drawn
+	wire reset_instructions, done;
+	wire [2:0] current_instruction;
+	instruction_shift i1(change_instruction, reset_n, clk, current_instruction);
+	mux_instructions i2(change_instruction, control_instructions, clk, reset_instructions, done, writeEn, color, x, y);
+	mux_control i3(change_instruction, current_instruction, reset_n, done, clear_instruction,
+		clk, reset_instructions, control_instructions);
+	
 
-	// with a VGA adaptor
+endmodule 
 
-endmodule
+//module mux_ui_ff (
+//	input change_instruction, 
+//	input reset_n,
+//	input clk,
+//	input clear_instruction,
+//	output VGA_CLK,   						//	VGA Clock
+//		output VGA_HS,							//	VGA H_SYNC
+//		output VGA_VS,							//	VGA V_SYNC
+//		output VGA_BLANK_N,						//	VGA BLANK
+//		output VGA_SYNC_N,						//	VGA SYNC
+//		output [9:0] VGA_R,   						//	VGA Red[9:0]
+//		output [9:0] VGA_G,	 						//	VGA Green[9:0]
+//		output [9:0] VGA_B  						//	VGA Blue[9:0]
+//	);
+//
+//	vga_adapter VGA(
+//			.resetn(reset_instructions),
+//			.clock(clk),
+//			.colour(color), 
+//			.x(x),
+//			.y(y),
+//			.plot(writeEn),
+//			.VGA_R(VGA_R),
+//			.VGA_G(VGA_G),
+//			.VGA_B(VGA_B),
+//			.VGA_HS(VGA_HS),
+//			.VGA_VS(VGA_VS),
+//			.VGA_BLANK(VGA_BLANK_N),
+//			.VGA_SYNC(VGA_SYNC_N),
+//			.VGA_CLK(VGA_CLK));
+//		defparam VGA.RESOLUTION = "160x120";
+//		defparam VGA.MONOCHROME = "FALSE";
+//		defparam VGA.BITS_PER_COLOUR_CHANNEL = 1;
+//		defparam VGA.BACKGROUND_IMAGE = "black.mif";
+//	wire [2:0] color; 
+//	wire [7:0] x;
+//	wire [6:0] y;
+//	wire [2:0] current_instruction; 
+//	wire [3:0] control_instructions;
+//	wire reset_instructions, done, writeEn;
+//	instruction_shift m0(change_instruction, reset_n, clk, current_instruction);
+//	mux_instructions m1(change_instruction,control_instructions, clk, reset_instructions, done, writeEn, color, x, y);
+//	mux_control m2(change_instruction, current_instruction, reset_n, done, clear_instruction, clk, reset_instructions, control_instructions);
+//	// clear_instruction paint the instruction back to black;
+//	// reset_instructions reset the instructions so that can be drawn
+//
+//	// with a VGA adaptor
+//
+//endmodule
 
 
 
 
 
 module mux_instructions(
+	input enable,
 	input [3:0] instruction,  // input instruction with 4 bit, [3] clear when 1
 	// [2:0] instruction 
 	input clk, 
 	input reset_n, 
-	output done, 
+	output reg done, 
 	output reg writeEn, 
 	output reg [2:0] color,
 	output reg [7:0] x,
@@ -70,6 +91,14 @@ module mux_instructions(
 	done5c, done6, done6c;
 	wire writeEn1, writeEn1c, writeEn2, writeEn2c, writeEn3, writeEn3c, writeEn4, 
 	writeEn4c, writeEn5, writeEn5c, writeEn6, writeEn6c;
+	reg [3:0] CURRRENT_INSTRUCTION;
+	
+	always @(*)
+	begin
+		if (enable)
+			CURRRENT_INSTRUCTION<=	instruction; // update instruction if enabled
+			
+	end
 	
 
 	localparam UP = 3'b000,
@@ -82,7 +111,7 @@ module mux_instructions(
 	wire [7:0] x1, x1c, x2, x2c, x3, x3c, x4, x4c, x5, x5c, x6, x6c;
 	wire [6:0] y1, y1c, y2, y2c, y3, y3c, y4, y4c, y5, y5c, y6, y6c;
 
-	always @(*) begin : proc_
+	always @(*) begin : FFFF
 		en_u1 = 0;
 		en_u1c = 0;
 		en_u2 = 0;
@@ -96,91 +125,133 @@ module mux_instructions(
 		en_u6 = 0;
 		en_u6c = 0;
 
-		case (instruction[2:0])
-			UP : if (instruction [3])
+		case (CURRRENT_INSTRUCTION[2:0])
+			UP : 
+				begin 
+				if (CURRRENT_INSTRUCTION[3])
+					begin
 					en_u1c =1;
-					x <= x1c;
-					y <= y1c;
-					done <= done1c;
-					writeEn <= writeEn1c;
-					color <= 3'b000;
+					x = x1c;
+					y = y1c;
+					done = done1c;
+					writeEn = writeEn1c;
+					color = 3'b000;
+					end
 				else 
+					begin
 					en_u1 = 1;
-					x <= x1;
-					y <= y1;
-					done <= done1;
-					writeEn <= writeEn1;
-					color <= 3'b111;
-			DOWN :  if (instruction [3])
+					x = x1;
+					y = y1;
+					done = done1;
+					writeEn = writeEn1;
+					color = 3'b111;
+					end
+				end
+			DOWN :  
+				begin
+				if (CURRRENT_INSTRUCTION[3])
+						begin
 						en_u2c =1;
-						x <= x2c;
-						y <= y2c;
-						done <= done2c;
-						writeEn <= writeEn2c;
-						color <= 3'b000;
+						x = x2c;
+						y = y2c;
+						done = done2c;
+						writeEn = writeEn2c;
+						color = 3'b000;
+						end
 					else 
+					begin
 						en_u2 = 1;
-						x <= x2;
-						y <= y2;
-						done <= done2;
-						writeEn <= writeEn2;
-						color <= 3'b001;
-			RIGHT : if (instruction [3])
+						x = x2;
+						y = y2;
+						done = done2;
+						writeEn = writeEn2;
+						color = 3'b001;
+						end
+					end
+			RIGHT : 
+				begin
+				if (CURRRENT_INSTRUCTION [3])
+					begin
 						en_u3c =1;
-						x <= x3c;
-						y <= y3c;
-						done <= done3c;
-						writeEn <= writeEn3c;
-						color <= 3'b000;
+						x = x3c;
+						y = y3c;
+						done = done3c;
+						writeEn = writeEn3c;
+						color = 3'b000;
+						end
 					else 
+					begin
 						en_u3 = 1;
-						x <= x3;
-						y <= y3;
-						done <= done3;
-						writeEn <= writeEn3;
-						color <= 3'b011;
-			LEFT :  if (instruction [3])
+						x = x3;
+						y = y3;
+						done = done3;
+						writeEn = writeEn3;
+						color = 3'b011;
+						end
+					end
+			LEFT :  
+				begin
+				if (CURRRENT_INSTRUCTION [3])
+					begin
 						en_u4c =1;
-						x <= x4c;
-						y <= y4c;
-						done <= done4c;
-						writeEn <= writeEn4c;
-						color <= 3'b000;
+						x = x4c;
+						y = y4c;
+						done = done4c;
+						writeEn = writeEn4c;
+						color = 3'b000;
+						end
 					else 
+					begin
 						en_u4 = 1;
-						x <= x4;
-						y <= y4;
-						done <= done4;
-						writeEn <= writeEn4;
-						color <= 3'b010;
-			R : if (instruction [3])
+						x = x4;
+						y = y4;
+						done = done4;
+						writeEn = writeEn4;
+						color = 3'b010;
+						end
+					end
+			R : 
+				begin
+				if (CURRRENT_INSTRUCTION [3])
+					begin
 					en_u5c =1;
-					x <= x5c;
-					y <= y5c;
-					done <= done5c;
-					writeEn <= writeEn5c;
-					color <= 3'b000;
+					x = x5c;
+					y = y5c;
+					done = done5c;
+					writeEn = writeEn5c;
+					color = 3'b000;
+					end
 				else 
+					begin
 					en_u5 = 1;
-					x <= x5;
-					y <= y5;
-					done <= done5;
-					writeEn <= writeEn5;
-					color <= 3'b100;
-			L : if (instruction [3])
+					x = x5;
+					y = y5;
+					done = done5;
+					writeEn = writeEn5;
+					color = 3'b100;
+					end
+				end
+			L : 
+				begin
+				if (CURRRENT_INSTRUCTION [3])
+					begin
 					en_u6c =1;
-					x <= x6c;
-					y <= y6c;
-					done <= done6c;
-					writeEn <= writeEn6c;
-					color <= 3'b000;
+					x = x6c;
+					y = y6c;
+					done = done6c;
+					writeEn = writeEn6c;
+					color = 3'b000;
+					end
 				else 
+					begin
 					en_u6 = 1;
-					x <= x6;
-					y <= y6;
-					done <= done6;
-					writeEn <= writeEn6;
-					color <= 3'b101;
+					x = x6;
+					y = y6;
+					done = done6;
+					writeEn = writeEn6;
+					color = 3'b101;
+					end
+				end
 			
 		endcase
 	end
@@ -245,8 +316,9 @@ module mux_control(
 	reg clear_ui;	   
 	always @(*) begin : proc_
 		case (CURRENT_STATE)
-			ON_HOLD : NEXT_STATE =  enable ? PREPARE_INSTRUCTION: ON_HOLD;
+			ON_HOLD : NEXT_STATE =  (enable) ? PREPARE_INSTRUCTION: ON_HOLD;
 			PREPARE_INSTRUCTION : 
+			begin
 				if ((!enable) & (!clear_ui))
 				begin
 					case (instruction)
@@ -273,6 +345,7 @@ module mux_control(
 					begin
 					NEXT_STATE = PREPARE_INSTRUCTION;
 					end
+			end
 			UP: NEXT_STATE = done ? UP_WAIT : UP;
 			UP_WAIT: NEXT_STATE = done ? UP_WAIT : ON_HOLD;
 			DOWN: NEXT_STATE = done ? DOWN_WAIT : DOWN;
@@ -305,13 +378,18 @@ module mux_control(
 	end
 
 	always @(*) begin : FSM_ASS
-		reset_instructions = 1'b1;
+		reset_instructions <= 1'b1;
 		case (CURRENT_STATE)
 			PREPARE_INSTRUCTION: 
-				clear ? clear_ui <= clear; // used for later
+				if (clear)
+					begin 
+					clear_ui <= clear; // used for later
+					end
 			ON_HOLD:
+				begin
 				clear_ui <= 0;
-				reset_instructions = 0;
+				reset_instructions <= 0;
+				end
 			UP: control_instructions <= 4'b0000;
 			DOWN: control_instructions <= 4'b0001;
 			RIGHT: control_instructions <= 4'b0010;
@@ -330,8 +408,8 @@ module mux_control(
 	
 	end
 
-	always @(posedge clock) begin : proc_
-		if(~reset_n) begin
+	always @(posedge clk) begin : FF
+		if(!reset_n) begin
 			CURRENT_STATE <= ON_HOLD;
 		end else begin
 			CURRENT_STATE <= NEXT_STATE;
@@ -341,14 +419,101 @@ module mux_control(
 
 endmodule
 
-// change instruction when change_instruction is high
+
+module control_shift(
+	output reset_clk,
+	output enable_random,
+	input );
+	
+	reg [1:0] CURRENT_STATE, NEXT_STATE;
+	
+	localparam START = 2'b00, 
+		   RESET = 2'b01,
+		   DONE = 2'b10;
+			
+	always @(*)
+	begin
+		case (CURRENT_STATE)
+			START: NEXT_STATE = RESET;
+			RESET: NEXT_STATE = (enable_random)? DONE: RESET;
+			DONE: NEXT_STATE = DONE;
+			default: NEXT_STATE = START;
+		endcase
+	end
+
+	always @(*)
+	begin
+		case (CURRENT_STATE)
+			START: 
+			begin
+			reset_clk <= 0;
+				enable_random <= 0;
+				end
+			RESET: reset_clk <= 1;
+		endcase
+	end
+
+endmodule 
+
+module datapath-shift();
+
+
+endmodule
+
+
+// change instruction when change_instruction is high, no need for reseting instruction_shift
 module instruction_shift(
 	input change_instruction, 
 	input clk,
-	input rst_n,
 	output reg [2:0] instruction);
 	wire [3:0]random;
+	wire rst_n;
+	reg [1:0]count; // counts clocks 
+	reg enable_random; // enable random, set rst-n to 1
 	reg [3:0]ran;
+	reg [1:0] CURRENT_STATE, NEXT_STATE;
+	reg reset_clk; // reset clock counter
+	localparam START = 2'b00, 
+		   RESET = 2'b01,
+		   DONE = 2'b10;
+
+	// reset this machine automatically in first 2 clk
+	always @(posedge clk)
+	begin
+		if (!reset_clk)
+			count <= 0;
+		else 
+			count <= count + 1'b1;
+			if (count == 2'b11)
+				enable_random <= 1'b1;
+	end
+	
+
+		assign rst_n = (enable_random)? 1 : 0;
+
+
+	always @(*)
+	begin
+		case (CURRENT_STATE)
+			START: NEXT_STATE = RESET;
+			RESET: NEXT_STATE = (enable_random)? DONE: RESET;
+			DONE: NEXT_STATE = DONE;
+			default: NEXT_STATE = START;
+		endcase
+	end
+
+	always @(*)
+	begin
+		case (CURRENT_STATE)
+			START: 
+			begin
+			reset_clk <= 0;
+				enable_random <= 0;
+				end
+			RESET: reset_clk <= 1;
+		endcase
+	end
+	
 	random r1 (clk, rst_n, random);
 	always @(posedge change_instruction) begin : proc_
 		ran <= random;
@@ -365,9 +530,16 @@ module instruction_shift(
 		else 
 			instruction <= 3'b101; // DIGIT
 	end
+
+	always @(posedge clk)
+	begin
+		CURRENT_STATE <= NEXT_STATE;
+	end
 	
 
 endmodule // module
+
+
 
 
 module dff_0(clock,reset_n,data_in,q);
@@ -404,4 +576,290 @@ module random(clock,reset_n,q);
 		dff_1 m2(clock,reset_n,q[0],q[1]);
 		dff_1 m3(clock,reset_n,q[1],q[2]);
 		dff_1 m4(clock,reset_n,q[2],q[3]);
+endmodule
+
+
+
+
+// for all the instruction UIs
+// this is the ui component we use to connect with mux_ui
+module ui_UP
+	(
+		input clk,						
+        input reset_vga, // reset controller
+        input enable_control, // enable the control
+		output [7:0] x,
+		output [6:0] y, 
+		output done,
+		output writeEn);
+	wire enable;
+	control_up c0(clk, reset_vga, enable_control, enable, writeEn);
+	datapath_up d0(clk, reset_vga, enable, x, y, done);
+
+endmodule
+
+
+
+// enable unit set start the unit, change with a palse of 1 : 0000100000
+// enable unit set start the unit, change with a palse of 1 : 0000100000
+module control_up(input clk, 
+			   input reset_n,
+			   input enable_unit,
+			   output reg enable, 
+			   output reg writeEn);
+
+	localparam 	ENABLE_STATE = 4'b0000, 
+				ENABLE_WAIT = 4'b0001, 
+				DRAW = 4'b0010,
+				DISABLE = 4'b0011;
+	reg [1:0] current_state, next_state;
+
+	always @(*) begin
+		case (current_state)
+			DISABLE : next_state = (enable_unit) ? ENABLE_STATE : DISABLE;
+			ENABLE_STATE : next_state = (enable_unit) ? ENABLE_STATE : ENABLE_WAIT;
+			ENABLE_WAIT : next_state = DRAW;
+			DRAW : next_state = (reset_n) ? DRAW : DISABLE;
+		endcase
+	end
+
+	always @(*) begin
+		enable = 1'b0;
+		writeEn = 1'b0;
+		case (current_state)
+			DRAW: begin
+				enable = 1'b1;
+				writeEn = 1'b1;
+			end
+		endcase
+	end
+
+	always @(posedge clk) begin
+		if (!reset_n) begin
+			current_state <= DISABLE;
+		end
+		else begin
+			current_state <= next_state;
+		end
+	end
+endmodule
+
+
+module datapath_up (input clk, 
+				input reset_n, 
+				input enable, 
+				output reg [7:0] x,
+				output reg [6:0] y,
+				output done // signal for all ui drawing is done
+				);
+
+	// could vary according to shape
+	wire [2:0] increment1;
+	wire [2:0] increment2;
+	wire [2:0] increment3;
+	// when rate division done, frame enabled
+	wire [20:0] rate_out;
+	wire frame_enable;
+	// when frame division done, x enabled 
+	wire [3:0] frame_out;
+	wire enable1, enable2, enable3;
+
+	
+	always @(posedge clk) begin : proc_
+		if (!reset_n)
+		begin
+			x <= 8'd79;  // from middle
+			y <= 7'd63;  // from top
+		end
+		else if (done)
+		begin
+			x <= 8'd79;  // from middle
+			y <= 7'd63;  // from top
+		end	
+		else if (enable3)
+		begin
+			x <= 8'd79 - increment3;
+			y <= 7'd63 + increment3;
+
+		end
+		else if (enable2)
+		begin
+			x <= 8'd79 + increment2;
+			y <= 7'd63 + increment2;
+		end
+		else if (enable1)
+		begin
+			x <= 8'd79;
+			y <= 7'd63 + increment1;
+		end
+	
+	end
+	// rate divider
+	rate_divider rate(clk, reset_n, enable, rate_out); 
+	assign frame_enable = (rate_out == 21'd0) ? 1 : 0;
+	
+	// frame counter
+	frame_counter frame(clk, frame_enable, reset_n, frame_out);
+	assign enable1 = (frame_out == 4'd10) ? 1 : 0;
+	
+	// x counter for square 4 * 4 plane
+	// threshold = 2'b11
+	// TODO: change x and y counter to shape
+	counter_8 c1(clk, enable1, reset_n, increment1);
+	
+	// assign y_enable = 1 when x goes through 1 row
+	assign enable2 = (increment1 == 3'b111) ? 1 : 0;
+	
+	counter_4 c2(clk, enable2, reset_n, increment2);
+
+	assign enable3 = (increment2 == 3'b011) ? 1 : 0;
+
+	counter_4 c3(clk, enable3, reset_n, increment3);
+	
+	assign done = (increment3 == 3'b011) ? 1 : 0;
+	
+	
+	
+endmodule
+
+
+
+
+module ui_DOWN
+	(
+		input clk,						
+        input reset_vga, // reset controller
+        input enable_control, // enable the control
+		output [7:0] x,
+		output [6:0] y, 
+		output done,
+		output writeEn);
+
+
+endmodule
+
+module ui_RIGHT
+	(
+		input clk,						
+        input reset_vga, // reset controller
+        input enable_control, // enable the control
+		output [7:0] x,
+		output [6:0] y, 
+		output done,
+		output writeEn);
+
+
+endmodule
+
+module ui_LEFT
+	(
+		input clk,						
+        input reset_vga, // reset controller
+        input enable_control, // enable the control
+		output [7:0] x,
+		output [6:0] y, 
+		output done,
+		output writeEn);
+
+
+endmodule
+
+module ui_L
+	(
+		input clk,						
+        input reset_vga, // reset controller
+        input enable_control, // enable the control
+		output [7:0] x,
+		output [6:0] y, 
+		output done,
+		output writeEn);
+
+
+endmodule
+
+module ui_R
+	(
+		input clk,						
+        input reset_vga, // reset controller
+        input enable_control, // enable the control
+		output [7:0] x,
+		output [6:0] y, 
+		output done,
+		output writeEn);
+
+
+endmodule
+
+
+module counter_4 (clk, enable, reset_n, increment);
+	input clk, enable, reset_n;
+	// could vary according to shape
+	output reg [2:0] increment;
+	
+	always @(posedge clk) begin
+		if (!reset_n)
+			increment <= 3'b0;
+		else if (enable) begin
+			if (increment == 3'b011)
+				increment <= 3'b0;
+			else 
+				increment <= increment + 1'b1;
+		end
+	end
+endmodule 
+
+module counter_8 (clk, enable, reset_n, increment);
+	input clk, enable, reset_n;
+	// could vary according to shape
+	output reg [2:0] increment;
+	
+	always @(posedge clk) begin
+		if (!reset_n)
+			increment <= 3'b0;
+		else if (enable) begin
+			if (increment == 3'b111)
+				increment <= 3'b0;
+			else
+				increment <= increment + 1'b1;
+		end
+	end
+endmodule
+
+
+// frame counter, count to 15 for every move so that the frame could refresh
+module frame_counter(clk, enable, reset_n, out);
+	input clk, enable, reset_n;
+	output reg [3:0] out;
+	
+	always @(posedge clk) begin
+		if (!reset_n)
+			out <= 4'b0;
+		else if (enable) begin
+			if (out == 4'b1111)
+				out <= 4'b0;
+			else
+				out <= out + 1'b1;
+		end
+	end
+endmodule
+
+
+// rate divider that divides the clk
+module rate_divider(clk, reset_n, enable, out);
+		input clk;
+		input reset_n;
+		input enable;
+		output reg [20:0] out;
+		
+		always @(posedge clk)
+		begin
+			if (!reset_n)
+				out <= 21'd0;
+			else if (enable) begin
+			   if (out == 21'd0)
+					out <= 21'd1666666;
+				else
+					out <= out - 1'b1;
+			end
+		end
 endmodule
