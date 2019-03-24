@@ -1,6 +1,6 @@
 vlib work
 
-vlog -timescale 1ns/1ns mux_ui.v
+vlog -timescale 1ns/1ns mux_ui_v2.v
 
 vsim mux_ui
 

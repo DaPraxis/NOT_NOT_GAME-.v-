@@ -12,7 +12,7 @@ module mux_ui ( // testing
 	wire [3:0] control_instructions;
 	wire reset_instructions, done;
 	wire [2:0] current_instruction;
-	instruction_shift i1(change_instruction, reset_n, clk, current_instruction);
+	instruction_shift i1(change_instruction, clk, current_instruction);
 	mux_instructions i2(change_instruction, control_instructions, clk, reset_instructions, done, writeEn, color, x, y);
 	mux_control i3(change_instruction, current_instruction, reset_n, done, clear_instruction,
 		clk, reset_instructions, control_instructions);
