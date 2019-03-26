@@ -1,5 +1,5 @@
 // this version only used for detect and debug, approved in milestone 1
-module ui_UP(
+module ui_START(
 	input [3:0]KEY,
 	input CLOCK_50,
 	input [9:0]SW,
@@ -12,17 +12,17 @@ module ui_UP(
 	output [9:0] VGA_G,	 						//	VGA Green[9:0]
 	output [9:0] VGA_B, 						//	VGA Blue[9:0]);
 	output [7:0] LEDR);   						
-	ui_up m1(CLOCK_50,KEY[0],~KEY[1],SW[2:0],   
+	ui_start m1(CLOCK_50,KEY[0],~KEY[1],~KEY[2],   
 		  VGA_CLK, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_R, VGA_G, VGA_B, LEDR[0]);
 
 endmodule
 
-module ui_up
+module ui_start
 	(
 		input clk,						
         input reset_vga, // reset controller
         input enable_control, // enable the control
-        input [2:0] color,
+	input clear,
 		// The ports below are for the VGA output.  Do not change.
 		output VGA_CLK,   						//	VGA Clock
 		output VGA_HS,							//	VGA H_SYNC
@@ -35,10 +35,13 @@ module ui_up
 		output done
 	);
 
+	wire [2:0] color;
+	reg [2:0] vga_color;
+
 	vga_adapter VGA(
 			.resetn(reset_vga),
 			.clock(clk),
-			.colour(color [2:0]), 
+			.colour(color), 
 			.x(x),
 			.y(y),
 			.plot(writeEn),
@@ -57,19 +60,22 @@ module ui_up
 	wire [7:0] x;
 	wire [6:0] y;
 	wire enable, reset_datapath;
-	control_UI c0(clk, reset_vga, enable_control, enable, writeEn, reset_datapath);
-	datapath_up d0(clk, reset_datapath, enable, x, y, done);
+	control_UI_start c0(clear, clk, reset_vga, enable_control, enable, writeEn, reset_datapath, color);
+	datapath_start d0(clk, reset_datapath, enable, x, y, done);
+
 
 endmodule
 
 
 // enable unit set start the unit, change with a palse of 1 : 0000100000
-module control_UI(input clk, 
+module control_UI_start(	input clear,
+			input clk, 
 			   input reset_n,
 			   input enable_unit,
 			   output reg enable, 
 			   output reg writeEn,
-			   output reg reset_datapath);
+			   output reg reset_datapath, 
+			   output [2:0] color);
 
 	localparam 	ENABLE_STATE = 4'b0000, 
 				ENABLE_WAIT = 4'b0001, 
@@ -107,11 +113,13 @@ module control_UI(input clk,
 			current_state <= next_state;
 		end
 	end
+	
+	assign color = (clear) ? 3'b000 : 3'b010;
 endmodule
 
 
 
-module datapath_up (input clk, 
+module datapath_start (input clk, 
 				input reset_n, 
 				input enable, 
 				output reg [7:0] x,
@@ -120,46 +128,135 @@ module datapath_up (input clk,
 				);
 
 	// could vary according to shape
-	wire [2:0] increment1;
-	wire [2:0] increment2;
-	wire [2:0] increment3;
+	wire [2:0] increment1, increment2, increment3, increment4, increment5, increment6, increment7, increment8, increment9, increment10,
+	increment11, increment12, increment13, increment14, increment15, increment16, increment17 ;
 	// when rate division done, frame enabled
 	wire [24:0] rate_out;
 	wire frame_enable;
 	// when frame division done, x enabled 
 	wire [4:0] frame_out;
-	wire enable1, enable2, enable3;
+	wire enable1, enable2, enable3, enable4, enable5, enable6, enable7, enable8, enable9, enable10, enable11, enable12, enable13, enable14, enable15, enable16, enable17;
 
 	
 	always @(posedge clk) begin : proc_
 		if (!reset_n)
 		begin
-			x <= 8'd79;  // from middle
-			y <= 7'd63;  // from top
+			x <= 8'd70;  // from middle
+			y <= 7'd60;  // from top
 		end
 		else if (done)
 		begin
-			x <= 8'd79;  // from middle
-			y <= 7'd63;  // from top
+			x <= 8'd70;  // from middle
+			y <= 7'd60;  // from top
+		end
+
+		else if (enable17)   //T done
+		begin
+			x <= 8'd102;
+			y <= 7'd60 + increment17;
+
+		end
+		else if (enable16)
+		begin
+			x <= 8'd100 + increment16;
+			y <= 7'd60;
+
+		end
+		
+
+		else if (enable15) //R done
+		begin
+			x <= 8'd95 + increment15;
+			y <= 7'd63 + increment15;
 		end	
+
+		else if (enable14)
+		begin
+			x <= 8'd95 + increment14;
+			y <= 7'd63;
+		end	
+
+		else if (enable13)
+		begin
+			x <= 8'd98;
+			y <= 7'd60 + increment13;
+		end	
+
+		else if (enable12)
+		begin
+			x <= 8'd95 + increment12;
+			y <= 7'd60;
+		end	
+
+		else if (enable11)
+		begin
+			x <= 8'd95;
+			y <= 7'd60 + increment11;
+		end
+
+		else if (enable10) //A done
+		begin
+			x <= 8'd84 + increment10;
+			y <= 7'd62;
+
+		end
+
+		else if (enable9)
+		begin
+			x <= 8'd86 - increment9;
+			y <= 7'd60 + increment9;
+
+		end
+		else if (enable8)
+		begin
+			x <= 8'd86 + increment8;
+			y <= 7'd60 + increment8;
+
+		end
+		else if (enable7)   //T done
+		begin
+			x <= 8'd75;
+			y <= 7'd60 + increment7;
+
+		end
+		else if (enable6)
+		begin
+			x <= 8'd73 + increment6;
+			y <= 7'd60;
+
+		end
+		else if (enable5)  // S done
+		begin
+			x <= 8'd70 - increment5;
+			y <= 7'd66;
+
+		end
+		else if (enable4)
+		begin
+			x <= 8'd70;
+			y <= 7'd63 + increment4;
+
+		end
 		else if (enable3)
 		begin
-			x <= 8'd79 - increment3;
-			y <= 7'd63 + increment3;
+			x <= 8'd67 + increment3;
+			y <= 7'd63;
 
 		end
 		else if (enable2)
 		begin
-			x <= 8'd79 + increment2;
-			y <= 7'd63 + increment2;
+			x <= 8'd67;
+			y <= 7'd60 + increment2;
 		end
 		else if (enable1)
 		begin
-			x <= 8'd79;
-			y <= 7'd63 + increment1;
+			x <= 8'd70 - increment1; 
+			y <= 7'd60; 
 		end
 	
 	end
+
+
 	// rate divider
 	rate_divider rate(clk, reset_n, enable, rate_out); 
 	assign frame_enable = (rate_out == 25'd0) ? 1 : 0;
@@ -169,42 +266,83 @@ module datapath_up (input clk,
 	assign enable1 = (frame_out == 4'd4) ? 1 : 0;
 	
 
-	counter_8 c1(clk, enable1, reset_n, increment1);
+	counter_5 c1(clk, enable1, reset_n, increment1); // IN FRAME 4
 	
 	// assign y_enable = 1 when x goes through 1 row
-	assign enable2 = (increment1 == 3'b111) ? 1 : 0;
+	assign enable2 = (increment1 == 3'b100) ? 1 : 0;
 	
-	counter_4 c2(clk, enable2, reset_n, increment2);
+	counter_5 c2(clk, enable2, reset_n, increment2);
 
-	assign enable3 = (increment2 == 3'b011) ? 1 : 0;
+	assign enable3 = (increment2 == 3'b100) ? 1 : 0;
 
-	counter_4 c3(clk, enable3, reset_n, increment3);
+	counter_5 c3(clk, enable3, reset_n, increment3);
+
+	assign enable4 = (increment3 == 3'b100) ? 1 : 0;
+
+	counter_5 c4(clk, enable4, reset_n, increment4);
+
+	assign enable5 = (increment4 == 3'b100) ? 1 : 0;
+
+	counter_5 c5(clk, enable5, reset_n, increment5); // S
+
+	assign enable6 = (increment5 == 3'b100) ? 1 : 0;
+
+	counter_6 c6(clk, enable6, reset_n, increment6);
+
+	assign enable7 = (increment6 == 3'b101) ? 1 : 0;
+
+	counter_8 c7(clk, enable7, reset_n, increment7); // T
+
+	assign enable8 = (frame_out == 4'd5) ? 1 : 0; // IN FRAME 5
+
+	counter_8 c8(clk, enable8, reset_n, increment8);
+
+	assign enable9 = (increment8 == 3'b111) ? 1 : 0;
+
+	counter_8 c9(clk, enable9, reset_n, increment9);
+
+	assign enable10 = (increment9 == 3'b111) ? 1 : 0;
+
+	counter_6 c10(clk, enable10, reset_n, increment10);// A 
+
+	assign enable11 = (frame_out == 4'd6) ? 1 : 0;    // IN FRAME 6
+
+	counter_8 c11(clk, enable11, reset_n, increment11); 
+
+	assign enable12 = (increment11 == 3'b111) ? 1 : 0;
+
+	counter_5 c12(clk, enable12, reset_n, increment12);
+
+	assign enable13 = (increment12 == 3'b100) ? 1 : 0;
+
+	counter_5 c13(clk, enable13, reset_n, increment13);
+
+	assign enable14 = (increment13 == 3'b100) ? 1 : 0;
+
+	counter_5 c14(clk, enable14, reset_n, increment14);
+
+	assign enable15 = (increment14 == 3'b100) ? 1 : 0;
+
+	counter_5 c15(clk, enable15, reset_n, increment15); // R
 	
-	assign done = (frame_out == 5'd17) ? 1 : 0;
-	// start done in 17 frame
+	assign enable16 = (increment5 == 3'b100) ? 1 : 0;
+
+	counter_6 c16(clk, enable16, reset_n, increment16);
+
+	assign enable17 = (increment6 == 3'b101) ? 1 : 0;
+
+	counter_8 c17(clk, enable17, reset_n, increment17); // T
+
 	
+
+
+
 	
-	
+	assign done = (frame_out == 5'd15) ? 1 : 0;
+	// start done in 15 frame
+
 endmodule
 
-module counter_3 (clk, enable, reset_n, increment);
-	input clk, enable, reset_n;
-	// could vary according to shape
-	output reg [2:0] increment;
-	
-	always @(posedge clk) begin
-		if (!reset_n)
-			begin
-			increment <= 3'b0;
-			end
-		else if (enable) begin
-			if (increment == 3'b010)
-				increment <= 3'b000;
-			else 
-				increment <= increment + 1'b1;
-		end
-	end
-endmodule 
 
 module counter_5 (clk, enable, reset_n, increment);
 	input clk, enable, reset_n;
@@ -225,8 +363,7 @@ module counter_5 (clk, enable, reset_n, increment);
 	end
 endmodule 
 
-
-module counter_4 (clk, enable, reset_n, increment);
+module counter_6 (clk, enable, reset_n, increment);
 	input clk, enable, reset_n;
 	// could vary according to shape
 	output reg [2:0] increment;
@@ -237,13 +374,14 @@ module counter_4 (clk, enable, reset_n, increment);
 			increment <= 3'b0;
 			end
 		else if (enable) begin
-			if (increment == 3'b011)
+			if (increment == 3'b101)
 				increment <= 3'b000;
 			else 
 				increment <= increment + 1'b1;
 		end
 	end
 endmodule 
+
 
 module counter_8 (clk, enable, reset_n, increment);
 	input clk, enable, reset_n;
@@ -275,7 +413,7 @@ module frame_counter(clk, enable, reset_n, out);
 			out <= 4'b0;
 			end
 		else if (enable) begin
-			if (out == 5'd18)
+			if (out == 5'd15)
 				out <= 4'b0;
 			else
 				out <= out + 1'b1;

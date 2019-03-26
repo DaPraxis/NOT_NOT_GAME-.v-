@@ -23,7 +23,7 @@
 
 // endmodule 
 
-module ui_UP_1(
+module mux_ui_test_inlab(
 	input [9:0] SW,
 	input CLOCK_50,
 	input [3:0] KEY,
@@ -65,7 +65,7 @@ module mux_ui_ff ( // clear_instruction need to be set with high change_instruct
 	vga_adapter VGA(
 			.resetn(reset_n),
 			.clock(clk),
-			.colour(vga_color), 
+			.colour(color), 
 			.x(x),
 			.y(y),
 			.plot(writeEn),
@@ -87,23 +87,22 @@ module mux_ui_ff ( // clear_instruction need to be set with high change_instruct
 	wire [3:0] control_instructions;
 	wire reset_instructions, done, writeEn;
 	wire [2:0] current_instruction;
-	reg [2:0] vga_color; // adjusted color
 	assign done_signal = done;
 	instruction_shift i1(change_instruction, clk, reset_n, current_instruction);
 	mux_instructions i2(change_instruction, control_instructions, clk, reset_instructions, done, writeEn, x, y);
-	mux_control i3(change_instruction, current_instruction, reset_n, done,
+	mux_control i3(clear_instruction, change_instruction, current_instruction, reset_n, done,
 		clk, reset_instructions, control_instructions, CURRENT_STATE, color);
-	always (*)
-	begin
-		if (clear_instruction)
-		begin
-			vga_color <= 3'b000;
-		end
-		else if (change_instruction)
-		begin
-			vga_color <= color;
-		end
-	end
+	//always (posedge clk)
+	//begin
+	//	if (clear_instruction | !reset_n)
+	//	begin
+	//		vga_color <= 3'b000;
+	//	end
+	//	else // if (change_instruction)
+	//	begin
+	//		vga_color <= color;
+	//	end
+	//end
 //	// clear_instruction paint the instruction back to black;
 //	// reset_instructions reset the instructions so that can be drawn
 //
@@ -242,6 +241,7 @@ module mux_instructions(
 endmodule 
 
 module mux_control(
+		input clear,
 		input enable,  // corresponding to change_instruction flag, flip
 		input [2:0]instruction,
 		input reset_n,
@@ -249,9 +249,10 @@ module mux_control(
 		input clk,
 		output reg reset_instructions, 
 		output reg [3:0] control_instructions,
-		output reg [5:0] CURRENT_STATE，
+		output reg [5:0] CURRENT_STATE,
 		output reg [2:0] color
 		);
+
 
 	localparam UP = 6'b000000, 
 			   UP_WAIT = 6'b000001,
@@ -319,27 +320,47 @@ module mux_control(
 				reset_instructions <= 0;
 				color <= 3'b000;
 				end
-			UP: control_instructions <= 4'b0000;
-			color <= 3'b001;
-			DOWN: control_instructions <= 4'b0001;
-			color <= 3'b010;
-			RIGHT: control_instructions <= 4'b0010;
-			color <= 3'b011;
-			LEFT: control_instructions <= 4'b0011;
-			color <= 3'b100;
-			R: control_instructions <= 4'b0100;
-			color <= 3'b101;
-			L: control_instructions <= 4'b0101;
-			color <= 3'b110;
-
+			UP: 
+			begin
+			control_instructions <= 4'b0000;
+			color <= (clear)? 3'b000:3'b001;
+			end
+			DOWN: 
+			begin
+			control_instructions <= 4'b0001;
+			color <= (clear)? 3'b000:3'b010;
+			end
+			RIGHT: 
+			begin
+			control_instructions <= 4'b0010;
+			color <= (clear)? 3'b000:3'b011;
+			end
+			LEFT: 
+			begin
+			control_instructions <= 4'b0011;
+			color <= (clear)? 3'b000:3'b100;
+			end
+			R: 
+			begin
+			control_instructions <= 4'b0100;
+			color <= (clear)? 3'b000:3'b101;
+			end
+			L: 
+			begin
+			control_instructions <= 4'b0101;
+			color <= (clear)? 3'b000:3'b110;
+			end
 		endcase
 	
 	end
+	
 
 	always @(posedge clk) begin : FF
 		if(!reset_n) begin
 			CURRENT_STATE <= ON_HOLD;
-		end else begin
+		end 
+		else
+		begin
 			CURRENT_STATE <= NEXT_STATE;
 		end
 	end
@@ -596,7 +617,7 @@ module datapath_up (input clk,
 	
 	// frame counter
 	frame_counter frame(clk, frame_enable, reset_n, frame_out);
-	 assign enable1 = (frame_out == 4'd4) ? 1 : 0;  // draw in 4 th frame
+	 assign enable1 = (frame_out == 4'd4) ? 1 : 0;  // DRAW IN 4 FRAME
 	
 
 	counter_8 c1(clk, enable1, reset_n, increment1);
@@ -610,7 +631,7 @@ module datapath_up (input clk,
 
 	counter_4 c3(clk, enable3 & frame_enable, reset_n, increment3);
 	
-	assign done = (frame_out == 5'd17) ? 1 : 0;
+	assign done = (frame_out == 5'd15) ? 1 : 0;
 	// start done in 17 frame
 	
 	
@@ -707,21 +728,21 @@ module datapath_down (input clk,
 	
 	// frame counter
 	frame_counter frame(clk, frame_enable, reset_n, frame_out);
-	 assign enable1 = (frame_out == 4'd4) ? 1 : 0;
+	 assign enable1 = (frame_out == 4'd5) ? 1 : 0;  // DRAW IN 5 FRAME
 	
 
-	counter_8 c1(clk, frame_enable, reset_n, increment1);
+	counter_8 c1(clk, enable1, reset_n, increment1);
 	
 	// assign y_enable = 1 when x goes through 1 row
 	assign enable2 = (increment1 == 3'b111) ? 1 : 0;
 	
-	counter_4 c2(clk, enable2 & frame_enable, reset_n, increment2);
+	counter_4 c2(clk, enable2, reset_n, increment2);
 
 	assign enable3 = (increment2 == 3'b011) ? 1 : 0;
 
-	counter_4 c3(clk, enable3 & frame_enable, reset_n, increment3);
+	counter_4 c3(clk, enable3, reset_n, increment3);
 	
-	assign done = (frame_out == 5'd17) ? 1 : 0;
+	assign done = (frame_out == 5'd15) ? 1 : 0;
 	// start done in 17 frame
 	
 	
@@ -801,21 +822,21 @@ module datapath_right (input clk,
 	
 	// frame counter
 	frame_counter frame(clk, frame_enable, reset_n, frame_out);
-	assign enable1 = (frame_out == 4'd4) ? 1 : 0;
+	assign enable1 = (frame_out == 4'd6) ? 1 : 0;  // DRAW IN 6 FRAME
 	
 
-	counter_8 c1(clk, frame_enable, reset_n, increment1);
+	counter_8 c1(clk, enable1, reset_n, increment1);
 	
 	// assign y_enable = 1 when x goes through 1 row
 	assign enable2 = (increment1 == 3'b111) ? 1 : 0;
 	
-	counter_4 c2(clk, enable2 & frame_enable, reset_n, increment2);
+	counter_4 c2(clk, enable2, reset_n, increment2);
 
 	assign enable3 = (increment2 == 3'b011) ? 1 : 0;
 
-	counter_4 c3(clk, enable3 & frame_enable, reset_n, increment3);
+	counter_4 c3(clk, enable3, reset_n, increment3);
 	
-	assign done = (frame_out == 5'd17) ? 1 : 0;
+	assign done = (frame_out == 5'd15) ? 1 : 0;
 	// start done in 17 frame
 
 endmodule
@@ -893,21 +914,21 @@ module datapath_left (input clk,
 	
 	// frame counter
 	frame_counter frame(clk, frame_enable, reset_n, frame_out);
-	assign enable1 = (frame_out == 4'd4) ? 1 : 0;
+	assign enable1 = (frame_out == 4'd7) ? 1 : 0;  // DRAW IN 7 FRAME
 	
 
-	counter_8 c1(clk, frame_enable, reset_n, increment1);
+	counter_8 c1(clk, enable1, reset_n, increment1);
 	
 	// assign y_enable = 1 when x goes through 1 row
 	assign enable2 = (increment1 == 3'b111) ? 1 : 0;
 	
-	counter_4 c2(clk, enable2 & frame_enable, reset_n, increment2);
+	counter_4 c2(clk, enable2, reset_n, increment2);
 
 	assign enable3 = (increment2 == 3'b011) ? 1 : 0;
 
-	counter_4 c3(clk, enable3 & frame_enable, reset_n, increment3);
+	counter_4 c3(clk, enable3, reset_n, increment3);
 	
-	assign done = (frame_out == 5'd17) ? 1 : 0;
+	assign done = (frame_out == 5'd15) ? 1 : 0;
 	// start done in 17 frame
 
 endmodule
@@ -988,15 +1009,15 @@ module datapath_L (input clk,
 	
 	// frame counter
 	frame_counter frame(clk, frame_enable, reset_n, frame_out);
-	assign enable1 = (frame_out == 4'd4) ? 1 : 0;
+	assign enable1 = (frame_out == 4'd8) ? 1 : 0;  // DRAW IN 8 FRAME
 	
 
-	counter_8 c1(clk, frame_enable, reset_n, increment1);
+	counter_8 c1(clk, enable1, reset_n, increment1);
 	
 	// assign y_enable = 1 when x goes through 1 row
 	assign enable2 = (increment1 == 3'b111) ? 1 : 0;
 	
-	counter_4 c2(clk, enable2 & frame_enable, reset_n, increment2);
+	counter_4 c2(clk, enable2, reset_n, increment2);
 
 	// assign enable3 = (increment2 == 3'b011) ? 1 : 0;
 
@@ -1113,42 +1134,42 @@ module datapath_R (input clk,
 	
 	// frame counter
 	frame_counter frame(clk, frame_enable, reset_n, frame_out);
-	assign enable1 = (frame_out == 4'd4) ? 1 : 0;
+	assign enable1 = (frame_out == 4'd9) ? 1 : 0;  // DRAW IN 9 FRAME
 	
 
-	counter_4 c1(clk, frame_enable, reset_n, increment1); // --
+	counter_4 c1(clk, enable1, reset_n, increment1); // --
 	
 	// assign y_enable = 1 when x goes through 1 row
 	assign enable2 = (increment1 == 3'b011) ? 1 : 0;
 	
-	counter_3 c2(clk, enable2 & frame_enable, reset_n, increment2);
+	counter_3 c2(clk, enable2, reset_n, increment2);
 
 	assign enable3 = (increment2 == 3'b010) ? 1 : 0;
 
-	counter_4 c3(clk, enable3 & frame_enable, reset_n, increment3);
+	counter_4 c3(clk, enable3, reset_n, increment3);
 
 	assign enable4 = (increment3 == 3'b011) ? 1 : 0;
 
-	counter_3 c4(clk, enable4 & frame_enable, reset_n, increment4);
+	counter_3 c4(clk, enable4, reset_n, increment4);
 
 	assign enable5 = (increment4 == 3'b010) ? 1 : 0;
 
-	counter_4 c5(clk, enable5 & frame_enable, reset_n, increment5);
+	counter_4 c5(clk, enable5, reset_n, increment5);
 
 	assign enable6 = (increment5 == 3'b011) ? 1 : 0;
 
-	counter_5 c6(clk, enable6 & frame_enable, reset_n, increment6);
+	counter_5 c6(clk, enable6, reset_n, increment6);
 
 	assign enable7 = (increment6 == 3'b100) ? 1 : 0;
 
-	counter_5 c7(clk, enable7 & frame_enable, reset_n, increment7);
+	counter_5 c7(clk, enable7, reset_n, increment7);
 
 	assign enable8 = (increment7 == 3'b100) ? 1 : 0;
 
-	counter_5 c8(clk, enable8 & frame_enable, reset_n, increment8);
+	counter_5 c8(clk, enable8, reset_n, increment8);
 
 	
-	assign done = (frame_out == 5'd22) ? 1 : 0;
+	assign done = (frame_out == 5'd15) ? 1 : 0;
 	// start done in 17 frame
 
 endmodule
@@ -1241,7 +1262,7 @@ module frame_counter(clk, enable, reset_n, out);
 			out <= 5'b0;
 			end
 		else if (enable) begin
-			if (out == 5'd18)
+			if (out == 5'd15)
 				out <= 5'b0;
 			else
 				out <= out + 1'b1;

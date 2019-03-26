@@ -201,39 +201,39 @@ module datapath_R (input clk,
 	assign enable1 = (frame_out == 4'd4) ? 1 : 0;
 	
 
-	counter_4 c1(clk, frame_enable, reset_n, increment1); // --
+	counter_4 c1(clk, enable1, reset_n, increment1); // --
 	
 	// assign y_enable = 1 when x goes through 1 row
 	assign enable2 = (increment1 == 3'b011) ? 1 : 0;
 	
-	counter_3 c2(clk, enable2 & frame_enable, reset_n, increment2);
+	counter_3 c2(clk, enable2, reset_n, increment2);
 
 	assign enable3 = (increment2 == 3'b010) ? 1 : 0;
 
-	counter_4 c3(clk, enable3 & frame_enable, reset_n, increment3);
+	counter_4 c3(clk, enable3, reset_n, increment3);
 
 	assign enable4 = (increment3 == 3'b011) ? 1 : 0;
 
-	counter_3 c4(clk, enable4 & frame_enable, reset_n, increment4);
+	counter_3 c4(clk, enable4, reset_n, increment4);
 
 	assign enable5 = (increment4 == 3'b010) ? 1 : 0;
 
-	counter_4 c5(clk, enable5 & frame_enable, reset_n, increment5);
+	counter_4 c5(clk, enable5, reset_n, increment5);
 
 	assign enable6 = (increment5 == 3'b011) ? 1 : 0;
 
-	counter_5 c6(clk, enable6 & frame_enable, reset_n, increment6);
+	counter_5 c6(clk, enable6, reset_n, increment6);
 
 	assign enable7 = (increment6 == 3'b100) ? 1 : 0;
 
-	counter_5 c7(clk, enable7 & frame_enable, reset_n, increment7);
+	counter_5 c7(clk, enable7, reset_n, increment7);
 
 	assign enable8 = (increment7 == 3'b100) ? 1 : 0;
 
-	counter_5 c8(clk, enable8 & frame_enable, reset_n, increment8);
+	counter_5 c8(clk, enable8, reset_n, increment8);
 
 	
-	assign done = (frame_out == 5'd22) ? 1 : 0;
+	assign done = (frame_out == 5'd15) ? 1 : 0;
 	// start done in 17 frame
 
 endmodule
@@ -326,7 +326,7 @@ module frame_counter(clk, enable, reset_n, out);
 			out <= 4'b0;
 			end
 		else if (enable) begin
-			if (out == 5'd18)
+			if (out == 5'd15)
 				out <= 4'b0;
 			else
 				out <= out + 1'b1;
